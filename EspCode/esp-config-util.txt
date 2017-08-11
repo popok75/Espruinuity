@@ -1,0 +1,69 @@
+
+esptool.py --port COM18 --baud 115200 erase_flash
+python esptool.py --port COM18 --baud 115200 write_flash --flash_freq 80m --flash_mode qio --flash_size 32m 0x0000 boot_v1.6.bin 0x1000 espruino_esp8266_user1.bin 0x3FC000 esp_init_data_default.bin 0x3FE000 blank.bin
+
+python esptool.py --port COM20 --baud 9600 write_flash --flash_freq 40m --flash_mode qio --flash_size 32m 0x0000 boot_v1.6.bin 0x1000 espruino_esp8266_user1.bin 0x3FC000 esp_init_data_default.bin 0x3FE000 blank.bin
+
+* Command to setup the WiFi for the ESP-12E
+
+var wifi = require("Wifi");
+
+COMMAND:
+require("Wifi").connect("Gardening, cheaper than therapy", { password: "seeds freedom" },  function(err){if(err)console.log(err);else console.log("connected!");})
+//require("Wifi").connect("GardXning, cheaper than therapy", { password: "seeds freedom" },  function(err){if(err)console.log(err);else console.log("connected!");})
+require("Wifi").setHostname("espruino");
+require("Wifi").startAP("espruino");
+require("Wifi").save();
+
+OUTPUT:
+=undefined
+connected!
+
+
+* Command to get the WiFi status
+
+COMMAND:
+wifi.getStatus()
+
+OUTPUT:
+={
+  "mode": "sta+ap",
+  "station": "connected",
+  "ap": "enabled",
+  "phy": "11n",
+  "powersave": "ps-poll",
+  "savedMode": "off"
+ }
+
+
+* Command to get the WiFi IP of the ESP-12E
+
+COMMAND: 
+wifi.getIP()
+
+OUTPUT:
+={
+  "ip": "192.168.2.6",
+  "netmask": "255.255.255.0",
+  "gw": "192.168.2.1",
+  "mac": "a0:20:a6:14:52:af"
+ }
+
+* Command to set the hostname of the ESP-12E
+
+COMMAND:
+wifi.setDHCPHostname("espruino")
+
+OUTPUT:
+=undefined
+
+* Command to save the WiFi settings on the ESP-12E
+
+COMMAND: wifi.save()
+
+OUTPUT:
+=undefined
+
+
+wifi.stopAP();
+wifi.startAP("espruino", {authMode:"open"});

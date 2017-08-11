@@ -1,0 +1,188 @@
+
+var initconnected=true;
+var wifi=require("Wifi");
+
+
+var dis=false;
+
+function waitSync(){
+
+    var prediff=0;
+    var interval=setInterval(function () {
+      var c=(new Date()).getTime();
+      var diff=c-t;
+
+
+      console.log("ip:"+require("Wifi").getIP().ip);
+
+      console.log("init:"+(new Date(t)).toString());
+      console.log("current:"+(new Date(c)).toString());
+
+      if(diff<threshold) {
+        console.log("NOT synced :"+diff/1000);
+        if(once){
+        //  require("Wifi").setSNTP("us.pool.ntp.org",3);
+          once=false;    
+        }
+      }
+      else {
+        console.log("synced :"+prediff/1000);
+        clearInterval(interval);
+        t=(new Date()).getTime();
+        var interval=setInterval(function () {
+          var c=(new Date()).getTime();
+          var diff2=c-t;
+          console.log("current time:"+(new Date()).toString()+" "+diff/1000+"s");
+        },3000);
+        return;
+      } 
+      if(diff>timeout) {
+         console.log("sync failed, stopping after "+diff/1000);
+        clearInterval(interval);
+        var interval=setInterval(function () {
+          console.log("current time:"+(new Date()).toString());
+        },5000);
+      }
+      prediff=diff;
+    }
+      ,2000);
+
+
+};
+
+
+ 
+function httpresponse(res) {
+  
+       //  console.log("status: " + JSON.stringify(res.headers.Date));
+        var d=res.headers["Date"];
+        if( d ==='undefined') {
+          onsole.log("No timestamp found");
+          return 0;
+        }
+        var d=  Date(res.headers.Date);
+        d= Date(d.getTime()+3*60*60*1000);  // Timezone +3
+        var l=  Date();
+
+        console.log("internet time : "+d.toString());
+        console.log("local time : "+l.toString());
+        var diff=l.getTime()-d.getTime();
+
+        console.log("diff:"+diff);
+
+        if(diff<-timeout) {
+         // setTime(d.getTime()/1000);
+          console.log("setting clock:"+diff);
+        }
+ 
+}
+ 
+function syncHTTPTime(){
+      "compiled";
+      var http = require("http");
+      var r=httpresponse;
+      http.get("http://google.gr",r);
+       
+  
+};
+
+
+
+
+var n=0;
+var stat;
+////////////////////////////////////////////////
+//wifi=require("Wifi");
+stat=JSON.stringify(wifi.getStatus())+"("+JSON.stringify(require("Wifi").getIP().ip)+")";
+n++;
+
+wifi.disconnect( function(details) {
+  dis=true;
+  console.log("DISDISCONNECTED !");
+    stat+="\n"+n+" DISDISCONNECTED !";n++;
+});
+
+
+
+ wifi.on('connected', function(details) {
+  console.log("CONNECTED !");
+     stat+="\n"+n+" CONNECTED !";n++;
+   dis=true;
+});
+
+ wifi.on('disconnected', function(details) {
+  dis=true;
+  console.log("DISCONNECTED !!");
+     stat+="\n"+n+"DISCONNECTED !";n++;
+});
+
+
+ wifi.on('auth_change', function(details) {
+  dis=true;
+  console.log("AUTHCHANGE !");
+    stat+="\n"+n+": AUTHCHANGE !";;n++;
+});
+
+var interval=setInterval(function () {
+    
+    console.log("status: "+JSON.stringify(require("Wifi").getStatus().station)+" init:"+initconnected);  
+    console.log("dis:"+dis);
+    console.log("stat:"+stat);
+//  stat+="\n\n "+n+" : "+JSON.stringify(wifi.getStatus())+"("+JSON.stringify(wifi.getIP().ip)+")";;n++;
+},2000);
+
+var status=wifi.getStatus().station;
+
+
+
+console.log("prestatus: "+status+" init:"+initconnected);
+initconnected=JSON.stringify(status);
+console.log("init status:"+initconnected);
+
+console.log("init status:"+initconnected);
+
+var timeout=10*60*1000;
+  var threshold=100*60*1000;
+var once=true;
+new Date();
+var t= (new Date()).getTime();
+if(t>threshold) t=(new Date(0)).getTime();
+
+console.log("before:"+(new Date()).toString());
+
+
+
+function startSync() {
+      require("Wifi").setSNTP("us.pool.ntp.org",3); 
+      syncHTTPTime();
+      waitSync();
+};
+
+console.log("after:"+(new Date()).toString());
+console.log("after2:"+(new Date()).toString());
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////
+
+
+
+
+//require("Wifi").setSNTP("us.pool.ntp.org",3);
+
+/*
+if(status==="connected") startSync();
+else require("Wifi").on('connected', function(details) {
+  startSync();
+  initconnected=false;
+});
+*/
+
+
+
