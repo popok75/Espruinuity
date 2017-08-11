@@ -1,0 +1,9 @@
+var wifi = require("Wifi");
+wifi.connect("my-ssid", {password:"my-pwd"}, function(err){
+  console.log("connected? err=", err, "info=", wifi.getIP());
+});
+wifi.stopAP();
+
+require("Wifi").connect("my-ssid", {password:"my-pwd"}, function(err){
+  console.log("connected? err=", err, "info=", wifi.getIP());
+});
