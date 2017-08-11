@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<classpath>
-	<classpathentry excluding="sofiane_esp12e/Programs/|project/modules/|project/projects/" kind="src" path=""/>
-	<classpathentry kind="src" path="project/modules"/>
-	<classpathentry kind="src" path="project/projects"/>
-	<classpathentry kind="src" path="sofiane_esp12e/Programs"/>
-	<classpathentry kind="con" path="org.eclipse.wst.jsdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="output" path=""/>
-</classpath>
