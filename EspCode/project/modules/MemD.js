@@ -54,7 +54,7 @@ exports.MemD = function(nmem,mempassed) {
 			
 		}
 
-		delete stack;
+//		delete stack;
 		delete Array;
 		
 		/* Recursive, but too much mem for stack

@@ -72,6 +72,7 @@ const CACHED_RESOURCES = [
   'js/plugins/tern.js',
   'js/plugins/debugger.js',
   'js/plugins/project.js',
+  'js/plugins/flashView.js',
   'js/plugins/uiMode.js',
   'js/plugins/webcam.js',
   'js/plugins/codeLink.js',

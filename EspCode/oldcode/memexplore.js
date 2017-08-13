@@ -32,6 +32,8 @@ delete global[v].HttpCC;
  * 
  var FS=require("FlashString");
  FS.load("test4");
+ require("FlashString").eraseAll();
+ require("FlashString").save("bug","text");
  require("FlashString").load("bug");
  
  

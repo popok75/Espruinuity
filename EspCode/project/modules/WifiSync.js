@@ -31,13 +31,14 @@ exports.WifiSync = function(){
 		req.removeAllListeners();
 		req.end();
 		// unload typed function objects // should use new ?
-		delete Date;
+/*		delete Date;
 		delete Math;
 		// unload object returned by get
 		delete req;
-		// unload objects left
+	*/	// unload objects left
 		delete httpCRs;
 		delete httpCRq;
+
 //		delete syncHttp;
 		
 		 delete global['\u00ff'].HttpCC;
