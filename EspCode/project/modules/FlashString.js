@@ -39,12 +39,12 @@ function s2a(str) {
 // find flash page for a string by name, returns the flash page address.
 // If the name is not found and free==1 it returns a free flash page addr, else it returns 0
 function findName(name, free) {
-	console.log("looking for ",name, free);
+//	console.log("looking for ",name, free);
   // iterate through flash pages to see whether there's a match
   var f = 0;
   for (var i=0; i<FN; i++) {
     var addr = FB+i*FS;
-    console.log("Checking", i, addr.toString(16));
+  //  console.log("Checking", i, addr.toString(16));
     // read index at start of page with name length and code text length
     var ix = FL.read(4, addr);
     var nameLen = ix[0];
@@ -53,7 +53,7 @@ function findName(name, free) {
   //  console.log("ix[3] ",String.fromCharCode(ix[3]) ,'\xA5' );
 //    console.log("(ix[3] != '\xA5) : ' ",(String.fromCharCode(ix[3]) !== '\xA5'));
     if (String.fromCharCode(ix[3]) !== '\xA5') {
-      console.log("  free at", addr.toString(16));
+ //     console.log("  free at", addr.toString(16));
       f = addr;
       continue;
     }
@@ -62,7 +62,7 @@ function findName(name, free) {
     // read the name
     var fName = FL.read(nameLen, addr+4);
     if (fName == name) {
-      console.log("  found at", addr.toString(16));
+ //     console.log("  found at", addr.toString(16));
       return addr;
     }
   }
@@ -78,23 +78,23 @@ exports.save = function(name, text) {
   // iterate through flash pages to see whether there's a match
   var addr = findName(nameArr, 1);
   if (!addr) throw("no space");
-  console.log("write at", addr.toString(16));
+ // console.log("write at", addr.toString(16), text.length);
   // erase page, then write header, then write name
   FL.erasePage(addr);
-  FL.write(E.toUint8Array([nal, text.length>>8, text.length % 255, '\xA5']), addr);
-  print("write"+JSON.stringify(E.toUint8Array([nal, text.length>>8, text.length % 255, '\xA5'])));
+  FL.write(E.toUint8Array([nal, text.length>>8, text.length % 256, '\xA5']), addr);
+ // print("write"+JSON.stringify(E.toUint8Array([nal, text.length>>8, text.length % 256, '\xA5'])));
   FL.write(nameArr, addr+4);
   // write text in small chunks to avoid copying the whole thing
-  console.log("write", (addr+4+nal).toString(16), text.length>>8, text.length % 255);
+//  console.log("write", (addr+4+nal).toString(16), text.length>>8, text.length % 256);
   for (var i=0; i<text.length; i+=16) {
-	 var sub = text.substr(i, 16);
+    var sub = text.substr(i, 16);
     while (sub.length < 16) sub += " ";
     var buf = E.toUint8Array(sub);
     //if (i+16 >= text.length) console.log("wr", (addr+4+nal+i).toString(16), sub);
     FL.write(buf, addr+4+nal+i);
   }
-  var ix = FL.read(4, addr);
-  console.log("readback", ix[0], ix[1], ix[2],ix[3]);
+//  var ix = FL.read(4, addr);
+//  console.log("readback", ix[0], ix[1], ix[2],ix[3]);
   
 }
 
@@ -102,7 +102,7 @@ exports.save = function(name, text) {
 // flash, i.e., it's a string created by E.memoryArea.
 exports.load = function(name) {
   // copy the module name into a Uint8Array rounded up to a multiple of 4 in length
-  var nameArr = s2a(name), nal = nameArr.length;
+  var nameArr = s2a(name);
   // iterate through flash pages to see whether there's a match
   var addr = findName(nameArr, 0);
   if (!addr) return null;
@@ -112,8 +112,8 @@ exports.load = function(name) {
   var codeAddr = addr+4+(ix[0]);
   var codeLen  = (ix[1]<<8) + ix[2];
   // return memory area
-  console.log("  memoryArea", codeAddr.toString(16), codeLen);
-  console.log("  ix", ix[0], ix[1], ix[2]);
+//  console.log("  memoryArea", codeAddr.toString(16), codeLen);
+//  console.log("  ix", ix[0], ix[1], ix[2]);
   return E.memoryArea(FO+codeAddr, codeLen);
 }
 
@@ -136,14 +136,14 @@ exports.eraseAll = function() {
     FL.erasePage(FB+i*FS);
 }
 
-
+/*
 //iterate through flash pages and load all modules
 exports.printList = function() {
-  console.log("Flash content: ");
+  //console.log("Flash content: ");
   var freepages=0;
   for (var i=0; i<FN; i++) { 
     var addr = FB+i*FS;
-    //console.log("Checking", i, addr.toString(16));
+   // console.log("Checking", i, addr.toString(16));
     // read index at start of page with name length and code text length
     var ix = FL.read(4, addr);
     var nameLen = ix[0];
@@ -151,7 +151,7 @@ exports.printList = function() {
     var codeLen = (ix[1]<<8) + ix[2];
     // see whether page is unused
     if (String.fromCharCode(ix[0]) == '\x00' || (String.fromCharCode(ix[1]) == '\x00' && String.fromCharCode(ix[2]) == '\x00') || String.fromCharCode(ix[3]) != '\xA5') {
-      //console.log("  nothing at", addr.toString(16));
+    //  console.log("  nothing at", addr.toString(16));
       freepages++;
       continue;
     }
@@ -165,7 +165,7 @@ exports.printList = function() {
   }
   console.log("   +"+ freepages+" free pages");
     
-  }
+  }*/
 
 exports.list = function() {
 	  var ret=Array();

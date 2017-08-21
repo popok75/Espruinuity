@@ -1,0 +1,30 @@
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Junkware Removal Tool (JRT) by Malwarebytes
+Version: 8.1.3 (04.10.2017)
+Operating System: Windows 7 Home Premium x64 
+Ran by Pok (Administrator) on 25/04/2017 at 11:13:01,51
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+File System: 35 
+
+Successfully deleted: C:\ProgramData\ad-aware browsing protection (Folder) 
+Successfully deleted: C:\ProgramData\pdfforge (Folder) 
+Successfully deleted: C:\Users\Pok\AppData\Local\{0A24BF83-7FA4-4141-826F-243D15A4EB98} (Empty Folder)
+Successfully deleted: C:\Users\Pok\AppData\Local\{0B903256-7540-4A98-BB4B-BB8005DAF179} (Empty Folder)
+Successfully deleted: C:\Users\Pok\AppData\Local\{2240C317-DC95-41FC-A2E0-671FDE790495} (Empty Folder)
+Successfully deleted: C:\Users\Pok\AppData\Local\{33FE6B76-EDF0-4762-9991-545DB4C0C10D} (Empty Folder)
+
+Registry: 1 
+
+Successfully deleted: HKCU\Software\Microsoft\Internet Explorer\Search\\SearchAssistant (Registry Value) 
+
+
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Scan was completed on 25/04/2017 at 11:24:08,14
+End of JRT log
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

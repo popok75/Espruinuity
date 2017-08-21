@@ -10,6 +10,7 @@ function Add(a,b) {
   this.A=a;
   this.B=b;
 }
+
 exports = Add;
 /* Returns sum of A and B*/
 Add.prototype.read = function() { return this.A+this.B; };

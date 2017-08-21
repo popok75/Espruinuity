@@ -9,6 +9,9 @@
 //- 5 blocks for module prototype declaration 
 //- 6 blocks for Array on global scope
 
+// string take less mem than arrays
+// argyuments take the most space in function delaration mem
+
 //objects
 function IONode(d){
 	this.type=d.type;
@@ -29,23 +32,33 @@ var js=JSON.stringify;
 var jp=JSON.parse;
 
 
-function upCR(n,fi,o){
-
+function upCR(arg,tab,o){ 
+	// arg is arguments
+	// tab is table name
+	// o is object holding table, to write 
+//		print("arg "+js(arg));
 	//	print("hello2 "+o.nodes);
-		var l=Object.keys(n).length;
+		var l=Object.keys(arg).length;
 		delete Object;
 		if(l===0) return;		
-		var tstr=o[fi];
+		var tstr=o[tab];
 	//	print("hello3 ."+tstr+".");
-		if(tstr.length==0) o[fi]="['"+js(n)+"']";
+		if(tstr.length==0) o[tab]="['"+js(arg)+"']";
 		else {
-			var l=JSON.parse(tstr);
-			var i=l.map(function(e) { e=jp(e); return e.name; }).indexOf(n);
-			if(i!=-1) {
-				l[i];
-				for (var k in n) {l[i][k]=e[k];}
-			} else l.push(js(n));
-			o[fi]=js(l);
+			var tabarray=JSON.parse(tstr);
+			var index=0;
+			var i=tabarray.map(function(e) { index++;
+				e=jp(e); //print("item "+index +" :");print(e);
+				return e["name"]; }).indexOf(arg["name"]);
+			if(i!=-1) {// found item
+				var it=jp(tabarray[i]);
+//				print("item found :"+js(it) );
+				for (var key in arg) {it[key]=arg[key];}
+//				print("item changed to :"+js(it) );
+				// for each field of arg copy val and key to o.tab.item
+				tabarray[i]=js(it);
+			} else tabarray.push(js(arg));
+			o[tab]=js(tabarray);
 		}
 
 	};
@@ -65,15 +78,15 @@ function IOData() {
 
 }
 
-IOData.prototype.updateNode =  function(e) {
+IOData.prototype.updateNode =  function(e) { // arg: {name:"Humidity", type:"input", unit:"\%", val:"-99"}
 	//print("hello1.7 "+JSON.stringify(this));
 	upCR(e,"nodes",this);		
 };
 IOData.prototype.updateRule =  function(e) {
-	print("hello1.7 "+JSON.stringify(e));
+	print("IOData.prototype.updateRule: "+JSON.stringify(e));
 
 	upCR(e,"rules",this);	
-	print("hello1.8 "+JSON.stringify(this.rules));
+	print("IOData.prototype.updateRule: rules: "+JSON.stringify(this.rules));
 
 };
 
