@@ -12,7 +12,7 @@
 "use strict";
 (function(){
   
-  var minifyUrl = "https://closure-compiler.appspot.com/compile";
+  var minifyUrl = "http://closure-compiler.appspot.com/compile";
   var minifyCache = [];
   
   function init() {
@@ -229,10 +229,11 @@
         js_code: code,
         language : "ECMASCRIPT6", // so no need to mess with binary numbers now. \o/
         language_out : "ECMASCRIPT5" // ES6 output uses some now features now that Espruino doesn't like
-      });   
-       $.post(minifyUrl, minifyObj, function(minifiedCode) {      
+      });      
+      $.post(minifyUrl, minifyObj, function(minifiedCode) {      
         code = minifiedCode;          
-      },"text").error(function() { 
+      },"text")
+      .error(function() { 
         Espruino.Core.Notifications.error("HTTP error while minifying.");
       })
       .complete(function() {

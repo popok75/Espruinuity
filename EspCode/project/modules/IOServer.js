@@ -20,31 +20,171 @@ const  lineend="</tr>";
 
 var docend="</tbody> </table></body></html>";*/
 
-// ideas for next
-//		- memory/flash
-//			- testbed : write a module in memory, load a moduleless code, add module executed from flash
-//			- pbs upload
-//				- minify (modules.addCached() ?), client-cli
-//				- transfer/auto-transfer
-//				- modify webide
-//			- StringLoader
-//			- Bootloader preload
-//		- other
-//			- github/cloud for all sources I still have and save
+//ideas for next
+//- memory/flash
+//- testbed : write a module in memory, load a moduleless code, add module executed from flash
+//- pbs upload
+//- minify (modules.addCached() ?), client-cli
+//- transfer/auto-transfer
+//- modify webide
+//- StringLoader
+//- Bootloader preload
+//- other
+//- github/cloud for all sources I still have and save
 
+var js=JSON.stringify;
+var jp=JSON.parse;
 
+exports.IOServer= function (arg1, arg2) {	
+	
+	
 
-function IOServer(idat) { // usage 39 block
-	// 3 arrays
-	//		- inputs
-	//		- outputs
-	//		- rules
-	this.data=idat;
+	if(!this.st) {
+		arg1.srv = (require("http")).createServer(exports.IOServer.bind({st:1,o:arg1}));	  
+		// this.onPageRequest.bind(this);
+		// print(this.srv);
+		arg1.srv.listen(80);
+		//print(this.sck);
+		print("IOServer - server listening : http://"+(require("Wifi")).getIP().ip+"/ or http://"+(require("Wifi")).getAPIP().ip+"/");
+		return arg1;
+	} else if(this.st==2){
+		console.log("IOServer - Socket error", arg1);
+	} else if(this.st==3){
+		console.log("IOServer - connection closed");
+	}
+	else if(this.st==1){
+		var req=arg1, res=arg2;
 
-//	var mythis=this;
-//	var srv;
+		
+		
+		print("----> Serving request : '"+req.url+"'");
+		req.on('error', exports.IOServer.bind({st:2,o:this.o}));
+		res.on('close', exports.IOServer.bind({st:3,o:this.o}));
+
+//		req.on('error', function(e) {console.log("IOServer - Socket error", e);});
+//		res.on('close', function(data) {console.log("IOServer - connection closed");});
+
+		print("Server0-",process.memory());
+
+		//res.writeHead(200, {'Content-Type': 'text/html', 'Link': '</favicon.ico>; rel="https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png"'});
+		if(req.url=== "/favicon.ico") {res.writeHead(200, {'Content-Type': 'text/html', 'Link': '</favicon.ico>; rel="https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png"'});res.end(); print("favicon header sent and closed");return;}
+
+		var u = url.parse(req.url, true);
+		var a = u.query;
+		print("query : "+js(a));
+		if(a!==null) {
+			if("rule" in a) { //update rule
+				a.name=""+a.rule;
+				delete a.rule;
+				this.o.data.updateRule(a);
+				print("updated rule "+a.name+" with "+a.name);
+			}
+			if("node" in a) { //update node
+				this.o.data.request({event:"push", object:{name:a.node, val:a.val}});
+				//		iod.updateNode();
+				print("update request posted "+a.node+" with "+a.val);
+			}
+		}
+
+		var p = u.pathname;
+		//if log file, name need to be changed
+		if(p.indexOf("/log")!=-1) p=exports.IOServer.bind({st:4})(p, this.o.fs);
+		print("path",p);
+		var q = this.o.fs.items[p];
+		if (q) {
+			console.log({match:p});
+ 			
+			
+	//		print("drain placed on",res);
+			this.o.fs.pipe(p,res);
+		} else {
+			if ( p === '/json/nodes' ) {this.o.data.request({event:"pull",object:"*"});
+			res.writeHead(200,{'Content-Type': 'application/json'});
+			var d=this.o.data;
+			//res.on('drain', function() {setTimeout(function(){print("served nodes");res.end(d.nodes);},1000);});
+			res.end(d.nodes);
+			return;
+			}
+			if ( p === '/json/rules' ) {
+				res.writeHead(200,{'Content-Type': 'application/json'});
+				res.end(this.o.data.rules);
+				return;
+			}
+
+			console.log({   q : a,   p : p  });
+			res.writeHead(404);
+			res.end("404: Not found");
+		}
+		print("Server1-",process.memory());
+	
+	
+	} else if(this.st==4) {
+		var k=arg1, fs=arg2;
+//		console.log("cfile",k);
+		// find required number
+		var ri=-1,cur="-cur";
+		for(var i=0;i<k.length;i++) {if(k[i]=="/") ri=i;}
+		if(ri<0) return "";
+		var l=parseInt(k.substring(ri+1,k.length));
+	//	console.log("cfile l",l);
+
+		// find cur on disk
+		var b=k.substring(0,ri+1);	
+//		console.log("cfile b",b);
+		var current="",max=0;
+		var ia=fs.items;
+		for(var it in ia){
+				console.log("cfile it",it);
+			if(it.indexOf(b)!=-1) {
+				if(it.indexOf(cur)!=-1){
+					current=it;
+				}
+				max++;
+			}
+		}
+//		console.log("cfile current",current);
+		if(current!="") {
+			current= parseInt((current.replace(cur,"")).replace(b,""));
+//			console.log("current",current);
+		} else return "";
+
+		var d=current-l;
+		if(d<0 && max>current) d+=max;
+		var ret=b+d;
+		if(d==current) ret+=cur;
+//		console.log("cfile ret",ret);
+
+		var item=jp(ia[ret]),addr =parseInt(fs.addr + item.p * fs.page_size, 10);
+		console.log("item",item);
+		var offset=item.l;
+		while(offset<fs.page_size){				//dichotomy faster
+			var ix=require("Flash").read(8,addr+offset);
+			print("oix",ix);
+			var restart=-1;
+			for(var i=7;i>=0;i--) if(ix[i]!= 0xFF) {restart=i;break;}
+			if(restart!=-1) {offset+=8-(7-restart);}
+			else break;
+			console.log("restart",restart,offset);
+		}
+//		console.log("length",item.l,offset);
+		if(offset>item.l) {item.l=offset;ia[ret]=js(item);console.log("length saved");}
+		return ret;
+	}
 };
-exports = IOServer;
+
+
+
+
+
+/*
+
+
+function IOServer(idat,fs) { // usage 39 block
+
+	this.data=idat;
+	this.fs=fs;
+};
+
 
 IOServer.prototype.createServer=function() {
 	this.srv = (require("http")).createServer(this.onPageRequest.bind(this));	  
@@ -57,258 +197,125 @@ IOServer.prototype.createServer=function() {
 };
 
 IOServer.prototype.onPageRequest=function(req, res) {
+	var js=JSON.stringify;
 	print("----> Serving request : '"+req.url+"'");
+	req.on('error', function(e) {
+		console.log("IOServer - Socket error", e);
+	});
+	res.on('close', function(data) {
+		console.log("IOServer - connection closed");
+	});
 
-	this.requestProcess(req,res);
-	print("M5-"+JSON.stringify(process.memory()));
-	
-};
-var js=JSON.stringify;
-var jp=JSON.parse;
+	print("Server0-"+js(process.memory()));
 
+	//res.writeHead(200, {'Content-Type': 'text/html', 'Link': '</favicon.ico>; rel="https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png"'});
+	if(req.url=== "/favicon.ico") {res.writeHead(200, {'Content-Type': 'text/html', 'Link': '</favicon.ico>; rel="https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png"'});res.end(); print("favicon header sent and closed");return;}
 
-IOServer.prototype.requestProcess=function(req,res){
-	print("P-2-"+JSON.stringify(process.memory()));
-	
-	res.writeHead(200, {'Content-Type': 'text/html', 'Link': '</favicon.ico>; rel="https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png"'});
-	if(req.url=== "/favicon.ico") {res.end(); print("favicon header sent and closed");return;}
-
-	var a = url.parse(req.url, true).query;
-	print("query : "+JSON.stringify(a));
+	var u = url.parse(req.url, true);
+	var a = u.query;
+	print("query : "+js(a));
 	if(a!==null) {
 		if("rule" in a) { //update rule
-			this.data.updateRule(a.rule,a.cvar,a.ccomp,a.cval,a.actvar,a.actval);
-			print("updated rule "+a.rule);
+			a.name=""+a.rule;
+			delete a.rule;
+			this.data.updateRule(a);
+			print("updated rule "+a.name+" with "+a.name);
 		}
-		if("node" in a) { //update rule
-			this.data.updateNode(a.node, "val", a.val);
-			print("updated "+a.node+" with "+a.val);
+		if("node" in a) { //update node
+			this.data.request({event:"push", object:{name:a.node, val:a.val}});
+			//		iod.updateNode();
+			print("update request posted "+a.node+" with "+a.val);
+
 		}
 	}
-	print("P-1-"+JSON.stringify(process.memory()));
-	
-	
-	// HTML Header and CSS
-//	res.write("<!DOCTYPE html><html><head><style> .pure-table{border-collapse:collapse;border-spacing:0;empty-cells:show;border:1px solid #cbcbcb}.pure-table caption{color:#000;font:italic 85%/1 arial,sans-serif;padding:1em 0;text-align:center}.pure-table td,.pure-table th{border-left:1px solid #cbcbcb;border-width:0 0 0 1px;font-size:inherit;margin:0;overflow:visible;padding:.5em 1em}.pure-table td:first-child,.pure-table th:first-child{border-left-width:0}.pure-table thead{background-color:#e0e0e0;color:#000;text-align:left;vertical-align:bottom}.pure-table td{background-color:transparent}.pure-table-odd td,.pure-table-striped tr:nth-child(2n-1) td{background-color:#f2f2f2}.pure-table-bordered td{border-bottom:1px solid #cbcbcb}.pure-table-bordered tbody>tr:last-child>td{border-bottom-width:0}.pure-table-horizontal td,.pure-table-horizontal th{border-width:0 0 1px;border-bottom:1px solid #cbcbcb}.pure-table-horizontal tbody>tr:last-child>td{border-bottom-width:0} h1{font-size:1.75em;margin:.67em 0;} body{font-family:FreeSans,Arimo,'Droid Sans',Helvetica,Arial,sans-serif;}</style><meta name='viewport' content='width=device-width, initial-scale=1.0'><link rel='icon' href='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' sizes='32x32'></head><body><h1>IOServer v0.01</h1><table class='pure-table pure-table-bordered pure-table-striped'> <thead>	<tr><th class='pure-table th' >Sensor</th>	<th class='pure-table th'>Value</th></tr></thead>   <tbody>");
-	res.write("<!DOCTYPE html><html><head> <style> .pure-table { border-collapse: collapse; border-spacing: 0; empty-cells: show; border: 1px solid #cbcbcb } .pure-table caption {color:#888;font:italic 125%/1 Helvetica, sans-serif;padding:.5em 1;text-align: center} .pure-table td, .pure-table th { border-left: 1px solid #cbcbcb; border-width: 0 0 0 1px; font-size: inherit; margin: 0; overflow: visible; padding: .5em 1em } .pure-table td:first-child, .pure-table th:first-child { border-left-width: 0 } .pure-table td { background-color: transparent } .pure-table-odd td, .pure-table-striped tr:nth-child(2n-1) td { background-color: #f2f2f2 } .pure-table-bordered td { border-bottom: 1px solid #cbcbcb } .pure-table-bordered tbody>tr:last-child>td { border-bottom-width: 0 } h1 { font-size: 1.75em; margin: .67em 0; } body { font-family: FreeSans, Arimo, 'Droid Sans', Helvetica, Arial, sans-serif; } </style> <meta name='viewport' content='width=device-width, initial-scale=1.0'><link rel='icon' href='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' sizes='32x32'></head><body> <h1>IOServer v0.01</h1> <table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Inputs</caption> <tr> <th class='pure-table th'>Input</th> <th class='pure-table th'>Value</th> </tr> </thead> <tbody>");
-//	res.write("<!DOCTYPE html><html><body><h1>IOServer v0.01</h1><table class='pure-table pure-table-bordered pure-table-striped'> <thead>	<tr><th class='pure-table th' >Sensor</th>	<th class='pure-table th'>Value</th></tr></thead>   <tbody>");	
-	print("P0-"+JSON.stringify(process.memory()));
-	
-	
-	// INPUTS
-	var ns= JSON.parse(this.data.nodes);
-	for (var i = 0; i <ns.length; i++) {
-		var e=JSON.parse(ns[i]);
-		if(e.type=="input") res.write(this.getNodeHtml(e));
-	}
-	print("P1-"+JSON.stringify(process.memory()));
-	
-	// OUTPUTS
-	res.end("</tbody> </table><br><table class='pure-table pure-table-bordered pure-table-striped'> <thead> <caption>Outputs</caption><tr> <th class='pure-table th'>Output</th> <th class='pure-table th'>Value</th> </tr> </thead><tbody>");
-	for (var i = 0; i <ns.length; i++) {
-		var e=JSON.parse(ns[i]);
-		if(e.type=="output") res.write(this.getNodeHtml(e));
-	}
-//	res.end("</tbody> </table><br>&emsp;&emsp;<img src='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' alt='IOSERVER' style='width:120px;'></body></html>");
-	print("P2-"+JSON.stringify(process.memory()));
-	
-	// RULES
-	res.write("</tbody></form> </table><br><table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Rules</caption> <tr> <th class='pure-table th'>Rule</th><th class='pure-table th'>If</th> <th class='pure-table th'>Then</th> </tr> </thead><tbody>");
-	var rs= jp(this.data.rules);
-	for (var i = 0; i <rs.length; i++) {
-		print ("rule :"+JSON.stringify(rs[i])); 
-		res.write(this.getRuleHtml(res,jp(rs[i])));
-	}
-	print("M2-"+JSON.stringify(process.memory()));
-	res.write("</tbody> </table>");
-	print("M3-"+JSON.stringify(process.memory()));
-	if(require("Wifi").getStatus().station==="connected") res.write("<br>&emsp;&emsp;<img src='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' alt='IOSERVER' style='width:120px;'>");
-	res.end("</body></html>");
-	print("M4-"+JSON.stringify(process.memory()));
-	
-};
- 
 
-IOServer.prototype.destroy=function() {
-	this.srv.close();
-	delete this.srv;
-	delete httpSrv;
-	var v="\xFF";
-	delete global[v].HttpS;
+	var p = u.pathname;
+	//if log file, name need to be changed
+	if(p.indexOf("/log")!=-1) p=cFile(p, this.fs);
+	print("path",p);
+	var q = this.fs.items[p];
+	if (q) {
+		console.log({match:p});
+		this.fs.pipe(p,res);
+	} else {
+		if ( p === '/json/nodes' ) {this.data.request({event:"pull",object:"*"});
+		res.writeHead(200,{'Content-Type': 'application/json'});
+		var d=this.data;
+		//res.on('drain', function() {setTimeout(function(){print("served nodes");res.end(d.nodes);},1000);});
+		res.end(d.nodes);
+		return;
+		}
+		if ( p === '/json/rules' ) {
+			res.writeHead(200,{'Content-Type': 'application/json'});
+			res.end(this.data.rules);
+			return;
+		}
+
+		console.log({   q : a,   p : p  });
+		res.writeHead(404);
+		res.end("404: Not found");
+	}
+	print("Server1-"+js(process.memory()));
+
 };
 
-IOServer.prototype.getRuleHtml=function(res,rule){
 
-	function getROpt(varn,tab,type,cv) {
-		var r="<select name="+varn+" form=rules onChange='this.form.submit();'>";
-		//	print("inside tab:"+tab);
-		tab.forEach(function(e) {
-			var sy="symb";
-			if(e[sy]===undefined) sy="name";
-			r+="<option value='"+e.name+"' ";
-			if(e.name==cv) r+="selected ";
-			r+=">"+e[sy]+"</option>";
-		});
-		return r+"</select>";
-	};
+function cFile(k,fs){
 
-	res.write("<tr><form action='/' method='get' id='rules'><td class='pure-table td'>"+rule.name+": <input type='hidden' name='rule' value="+rule.name+"></td><td class='pure-table td'>if ");
-	
-	
-	var ndsin=[];
-	var ndsout=[];
-	jp(this.data.nodes).forEach(function(e) {
-		e=jp(e);
-		if(e.type==="input") ndsin.push({name:e.name}); 
-		else if (e.type==="output") ndsout.push({name:e.name});
-		});
-	
-	print("ndsin:"+JSON.stringify(ndsin));
-	
-	
-	
-	res.write(getROpt("cvar",ndsin, "input",rule.cvar));
-	var comp=[{name:"less",symb:"&#60;"},{name:"greaterorequal",symb:"&#8805;"}];
-	res.write(getROpt("ccomp",comp,undefined,rule.ccomp));
-	res.write("<input type='text' name='cval' value="+rule.cval+" size=1 style='width: 2em'>&nbsp;");
+//	console.log("cfile",k);
+	// find required number
+	var ri=-1,cur="-cur";
+	for(var i=0;i<k.length;i++) {if(k[i]=="/") ri=i;}
+	if(ri<0) return "";
+	var l=parseInt(k.substring(ri+1,k.length));
+//	console.log("cfile l",l);
 
-	
-	
-	res.write("</td><td class='pure-table td'>then ");
-	res.write(getROpt("actvar",ndsout, "output", rule.actvar));
-	comp=[{name:"0",symb:"Off"},{name:"1",symb:"On"}];
-	res.write(getROpt("actval",comp,undefined,"val",rule.actval,"symb"));
+	// find cur on disk
+	var b=k.substring(0,ri+1);	
+	console.log("cfile b",b);
+	var current="",max=0;
+	var ia=fs.items;
+	for(var it in ia){
+		//	console.log("cfile it",it);
+		if(it.indexOf(b)!=-1) {
+			if(it.indexOf(cur)!=-1){
+				current=it;
+			}
+			max++;
+		}
+	}
+//	console.log("cfile current",current);
+	if(current!="") {
+		current= parseInt((current.replace(cur,"")).replace(b,""));
+		console.log("current",current);
+	} else return "";
 
-	res.write("</td></tr></form>");
-	print("M-"+JSON.stringify(process.memory())); 	
-};
+	var d=current-l;
+	if(d<0 && max>current) d+=max;
+	var ret=b+d;
+	if(d==current) ret+=cur;
+	//console.log("cfile ret",ret);
 
-IOServer.prototype.getNodeHtml=function(e){
-	const  linestart = "<tr>";
-	const  namestart="<td class='pure-table td'>";
-	const  nameend="</td>";
-	const  valuestart="<td class='pure-table td' style='text-align: center'>";
-	const  valueend= "</td>";
-	const  lineend="</tr>";
-
-//	var docend="</tbody> </table></body></html>";
-//	console.log("getInput::this: "+JSON.stringify(this));
-//	console.log("getInput::this.inputs: "+JSON.stringify(this.inputs));
-	var ret="";
-	ret+=linestart;
-	ret+=namestart;
-	ret+=e.name;
-	ret+=nameend;
-	ret+=valuestart;
-	if(e.type==="output") {ret+="<form action='/' method='get' id='output'><input type='hidden' name='node' value="+e.name+">"+this.getForm(e)+"</form>";
-	}else {ret+=e.val;ret+=e.unit;}
-	ret+=valueend;
-	ret+=lineend;
+	var addr = fs.address(ia[ret].page);
+	var offset=0;
+	var end=0;
+	while(!end && offset<fs.page_size){				
+		var ix=require("Flash").read(8,addr+offset);
+		print("oix",ix);
+		var restart=-1;
+		for(var i=7;i>=0;i--) if(ix[i]!= 0xFF) {restart=i;break;}
+		if(restart!=-1) {offset+=8-(7-restart);}
+		else {end=true;}
+//		console.log("restart",restart,offset);
+	}
+	console.log("length",ia[ret].length,offset);
+	if(offset>ia[ret].length) ia[ret].length=offset;
 	return ret;
 };
 
-IOServer.prototype.getForm=function(e){
-	var r="<input type='radio' name='val' value='1'";
-	var r2="> On <input type='radio' name='val' value='0' ";
-	if(e.val==0) {r+="onChange='this.form.submit();'";r2+="checked";}else {r2+="onChange='this.form.submit();'";r+="checked";}		
-	r2+="> Off";	
 
-	return r+r2;	
-
-
-};
-
-
-
-
-/*
-
-
-
-
-
-	this.getPage=function () {
-	//	console.log("getPage::this: "+JSON.stringify(this));
-
-		var ret="";
-	//	ret+=this.inputs.length;
-		var arrayLength = this.inputs.length;
-		for (var i = 0; i < arrayLength; i++) {
-			ret+=this.getInput(i);		
-			}
-
-		ret+=docend;
-		return ret;
-	};
-
-
-	function showError(response) {
-		response.writeHead(404, {"Content-Type": "text/plain"});
-		response.write("404 Not Found\n");
-		response.end();
-		return; 
-	}
-
-	function showJSON(response,obj) {
-		 response.writeHead(200, {
-             'Content-Type': 'text/html',
-             'Access-Control-Allow-Origin' : '*'});
-		response.write(JSON.stringify(obj));
-		response.end();
-		return; 
-	}
-
-	this.onPageRequest=function(req, res) {
-		console.log("---->Serving request :"+req.url);
-
-	//	console.log(JSON.stringify(mythis));
-
-		if(req.url==="/data.json") {
-				console.log("showing json for url:"+req.url);
-				showJSON(res, mythis.inputs);
-				return ;
-		}
-
-
-	//	console.log("url:'"+req.url+"'");
-/*
-		if(req.url==="/") {}
-			else {
-				console.log("no url:"+req.url);
-				showError(res);
-				return ;}
- * /	
-		var a = url.parse(req.url, true);
-
-
-	//	console.log("query:"+JSON.stringify(a));
-
-		// here use input arguments
-
-		res.writeHead(200, {'Content-Type': 'text/html'});
-//		res.write("<!DOCTYPE html><html><meta name='viewport' content='width=device-width, initial-scale=1.0'><style> .pure-table { border-collapse: collapse; border-spacing: 0; empty-cells: show; border: 1px solid #cbcbcb } .pure-table caption { color: #000; font: italic 85%/1 arial, sans-serif; padding: 1em 0; text-align: center } .pure-table td, .pure-table th { border-left: 1px solid #cbcbcb; border-width: 0 0 0 1px; font-size: inherit; margin: 0; overflow: visible; padding: .5em 1em } .pure-table td:first-child, .pure-table th:first-child { border-left-width: 0 } .pure-table thead { background-color: #e0e0e0; color: #000; text-align: left; vertical-align: bottom } .pure-table td { background-color: transparent } .pure-table-odd td, .pure-table-striped tr:nth-child(2n-1) td { background-color: #f2f2f2 } .pure-table-bordered td { border-bottom: 1px solid #cbcbcb } .pure-table-bordered tbody>tr:last-child>td { border-bottom-width: 0 } .pure-table-horizontal td, .pure-table-horizontal th { border-width: 0 0 1px; border-bottom: 1px solid #cbcbcb } .pure-table-horizontal tbody>tr:last-child>td { border-bottom-width: 0 } </style><link rel='icon' href='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' sizes='32x32'><head> <title>IOServer Espruino</title></head><body> <table class='pure-table pure-table-bordered pure-table-striped'> <caption> INPUTS</caption> <thead> <tr> <th class='pure-table th'>Sensor</th> <th class='pure-table th'>Value</th> </tr> </thead> <tbody>");
-		var p=mythis.getPage();
-        res.end(p);
-
-	};
-	this.createServer=function() {
-		var http = require("http");
-		var srv=http.createServer(this.onPageRequest).listen(80);
-		console.log("IOServer - server listening : http://"+(require("Wifi")).getIP().ip+"/ or http://"+(require("Wifi")).getAPIP().ip+"/");
-	//	require("Wifi").startAP("Espruino");
-	/*	var net=require('net');
-		function callbackdata(data) {
-			  console.log({data:data});
-			}
-		net.createServer(callbackdata).listen(8080);
-		console.log("IOServer - server listening2 : http://"+(require("Wifi")).getIP().ip+"/ or http://"+(require("Wifi")).getAPIP().ip+"/");
- * /		
-	};*/
-
-//}
-
-
-
+exports = IOServer;
+ */
 ///// proto local client
 
 //create sensor

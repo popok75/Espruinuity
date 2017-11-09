@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        .pure-table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            empty-cells: show;
+            border: 1px solid #cbcbcb
+        }
+
+        .pure-table caption {
+            color: #888;
+            font: italic 125%/1 Helvetica, sans-serif;
+            padding: .5em 1;
+            text-align: center
+        }
+
+        .pure-table td,
+        .pure-table th {
+            border-left: 1px solid #cbcbcb;
+            border-width: 0 0 0 1px;
+            font-size: inherit;
+            margin: 0;
+            overflow: visible;
+            padding: .5em 1em
+        }
+
+        .pure-table td:first-child,
+        .pure-table th:first-child {
+            border-left-width: 0
+        }
+
+        .pure-table td {
+            background-color: transparent
+        }
+
+        .pure-table-odd td,
+        .pure-table-striped tr:nth-child(2n-1) td {
+            background-color: #f2f2f2
+        }
+
+        .pure-table-bordered td {
+            border-bottom: 1px solid #cbcbcb
+        }
+
+        .pure-table-bordered tbody>tr:last-child>td {
+            border-bottom-width: 0
+        }
+
+        h1 {
+            font-size: 1.75em;
+            margin: .67em 0;
+        }
+
+        body {
+            font-family: FreeSans, Arimo, 'Droid Sans', Helvetica, Arial, sans-serif;
+        }
+    </style>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <link rel='icon' href='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' sizes='32x32'>
+    <script>
+        getPre = function(a) {
+            switch (a) {
+                case 'preinput':
+                    return "<table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Inputs</caption> <tr> <th >Input</th> <th >Value</th> </tr> </thead> <tbody>";
+                case 'preoutput':
+                    return "<br><table class='pure-table pure-table-bordered pure-table-striped'> <thead> <caption>Outputs</caption><tr> <th >Output</th> <th >Value</th> </tr> </thead><tbody>";
+                case 'prerule':
+                    return "<table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Rules</caption> <tr> <th>Active</th><th >Name</th><th >Condition</th> <th>Action</th> <th>Delete</th></tr> </thead><tbody>";
+                case 'neo':
+                    return "<table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Add rule</caption></thead><tbody><tr><td>Name</td><td>";
+            }
+        };
+        var r = '';
+        var jp = JSON.parse;
+        writeTable = function(m, a, c, p, j, o) {
+            function h(c, d, a) {
+                var b = a.lastitembytes;
+                return c.length - b > d ? (c = c.substring(b, b + d), a.lastitembytes = b + d, a.status = 'continue') : (b > 0 && (c = c.substring(b)), a.lastitembytes = 0, a.lastitem = a.lastitem + 1, a.status = 'next'), c;
+            }
+            var n = '</tbody> </table>';
+            var g = 0;
+            var e = '';
+            if (a.operation === undefined && (a.operation = 'header', a.lastitem = 0, a.lastitembytes = 0, a.written = 0), a.operation == 'header') {
+                var b;
+                r === '' ? b = h(getPre('pre' + m), c, a) : b = h(r('IOServerStrings').getPre('pre' + m), c, a), e += b, c -= b.length, g += b.length, a.status === 'next' && (a.operation = 'data', a.lastitem = 0, a.lastitembytes = 0);
+            }
+            var k = c;
+            var l = jp(j);
+            if (a.operation == 'data')
+                for (var f = a.lastitem; f < l.length && g < k; f++) {
+                    var d = jp(l[f]);
+                    if (d.type == m) {
+                        var b = '';
+                        d.type == 'rule' ? r === '' ? b += getRuleHtml(d, j, o) : b += r('WifiSync').getRuleHtml(d, j, o) : b += getNodeHtml(d), a.lastitem = f;
+                        var i = h(b, c, a);
+                        c -= i.length, g += i.length, e += i;
+                    }
+                }
+            if (a.operation == 'data' && a.status == 'next' && g < k && (a.operation = 'footer', a.lastitem = 0, a.lastitembytes = 0), a.operation == 'footer') {
+                var b = h(n, c, a);
+                e += b, c -= b.length, a.status === 'next' && (a.operation = 'finished');
+            }
+            return p.write(e), a.written = e.length, a;
+        };
+        getNodeHtml = function(b) {
+            function i(c) {
+                var b = "<input type='radio' name='val' value='1'";
+                var a = "> On <input type='radio' name='val' value='0' ";
+                return c.val == 0 ? (b += "onChange='this.form.submit();'", a += 'checked') : (a += "onChange='this.form.submit();'", b += 'checked'), a += '> Off', b + a;
+            }
+            const c = '<tr>';
+            const d = '<td>';
+            const e = '</td>';
+            const f = "<td style='text-align: center'>";
+            const g = '</td>';
+            const h = '</tr>';
+            var a = '';
+            return a += c, a += d, a += b.name, a += e, a += f, b.type === 'output' ? a += "<form method='get' id='output'><input type='hidden' name='node' value=" + b.name + '>' + i(b) + '</form>' : (a += b.val, a += b.unit), a += g, a += h, a;
+        };
+        getRuleHtml = function(a, p, q, e) {
+            function i(g, f, h, i) {
+                var a = '<select name=' + g;
+                e || (a += " onChange='this.form.submit();'"), a += " form='" + i + "'>";
+                for (var c = 0; c < f.length; c++) {
+                    var b = f[c];
+                    var d = 'symb';
+                    b[d] === undefined && (d = 'name'), a += "<option value='" + b.name + "' ", b.name == h && (a += 'selected '), a += '>' + b[d] + '</option>';
+                }
+                return a + '</select>';
+            }
+
+            function m(c, g, j, k, f, d, h, e) {
+                c == 'rule' && (d = h);
+                var a = '<small>' + c + ' </small>' + i(g, d, j, e);
+                var b = [{
+                    name: '0',
+                    symb: 'Off'
+                }, {
+                    name: '1',
+                    symb: 'On'
+                }];
+                return a += i(k, b, f, e), a;
+            }
+
+            function r(d, e, b) {
+                b = jp(b);
+                for (var c = 0; c < b.length; c++) {
+                    var a = jp(b[c]);
+                    e === undefined ? d.push({
+                        name: a.name
+                    }) : a.type === 'input' ? d.push({
+                        name: a.name
+                    }) : a.type === 'output' && e.push({
+                        name: a.name
+                    });
+                }
+            }
+
+            function d(b, c, d) {
+                var a = '<input hidden ';
+                return b != 'submit' ? a += "name='" + b + "' value=" + c + '' : a += 'type=submit ', a + " form='" + d + "'>";
+            }
+
+            function o(b, c, e, f) {
+                var a = d(b, c, e) + "<input type='checkbox' onChange='this.form." + b + '.value=1-this.form.' + b + '.value;';
+                return f && (a += 'this.form.submit();'), c == '1' && (a += "' checked"), a + " form='" + e + "'>";
+            }
+            e === void 0 && (e = !1);
+            var n = 3;
+            var b = a.name,
+                k = d('rule', b, b),
+                l = "<td style='text-align:center'>" + o('active', a.active, b, !0) + '</td>' + '<td >' + b;
+            e && (k = "<td ><input type='text' name='rule' form='" + b + "' value=" + b + '>' + d('active', a.active, b), l = '');
+            var j = '';
+            a.ts !== '-1' && a.ts !== undefined && (j += '<small> : started ' + new Date(parseFloat(a.ts - n * 3600000)).toString().split('GMT')[0] + '</small>');
+            var c = '<tr>';
+            e && (c = ''), c += "<form method='get' id='" + b + "'>" + k + l + d('type', 'rule', b) + d('ctype', a.ctype, b) + j + '</td><td >', k = '', j = '';
+            var h = [];
+            var f = [];
+            r(h, f, q);
+            var g = [];
+            if (r(g, undefined, p), q = undefined, p = undefined, a.ctype == 'timer') h = undefined, c += 'A1, wait :', c += "<input type='text' name='t1' value=" + a.t1 + " size=1 style='width:2em' form='" + b + "'>&nbsp;", c += 'sec, A2. cycle :', c += o('cyc', a.cyc, b, !1), a.cyc == '1' && (c += "<input type='text' name='t2' value=" + a.t2 + " size=1 style='width: 2em' form='" + b + "'>&nbsp;"), c += '</td><td> A1:' + d('acttype1', a.acttype1, b), c += m(a.acttype1, 'actvar1', a.actvar1, 'actval1', a.actval1, f, g, b), c += ' , A2:' + d('acttype2', a.acttype2, b) + m(a.acttype2, 'actvar2', a.actvar2, 'actval2', a.actval2, f, g, b);
+            else {
+                c += 'if ' + i('cvar', h, a.cvar, b), h = undefined;
+                var s = [{
+                    name: 'less',
+                    symb: '&#60;'
+                }, {
+                    name: 'greaterorequal',
+                    symb: '&#8805;'
+                }];
+                c += i('ccomp', s, a.ccomp, b), c += "<input type='text' name='cval' value=" + a.cval + " size=1 style='width:2em' form='" + b + "'>&nbsp;", c += '</td><td >then ', c += d('acttype', a.acttype, b) + m(a.acttype, 'actvar', a.actvar, 'actval', a.actval, f, g, b);
+            }
+            return f = undefined, e ? c += "</td><td><input type=submit form='" + b + "'></td>" : c += d('submit', b, b) + "</td><td><button type='submit' value='1' name='delete' onclick='this.form.submit()' form='" + b + "'  > &#9760; </button>", c += '</form>', e || (c += '</tr>'), c;
+        };
+        addRule = function(b, c) {
+            function d(e, f, a) {
+                a = jp(a);
+                for (var b = 0; b < a.length; b++) {
+                    var c = jp(a[b]);
+                    var d = {
+                        name: c.name
+                    };
+                    f === 0 ? e.push(d) : c.type === 'input' ? e.push(d) : c.type === 'output' && f.push(d);
+                }
+            }
+
+            function e(b, c, d, e) {
+                function a(a, b) {
+                    return "<option value='" + a + "'>" + b + '</option>';
+                }
+                return "<select onChange='changeRule(this.value)'>" + a(b, c) + a(d, e) + '</select>';
+            }
+            getDef = function(e, n) {
+                function o(b, a) {
+                    for (g = 0; g < a.length; g++)
+                        if (a[g].name == b) return !0;
+                    return !1;
+                }
+                var l = [],
+                    j = [],
+                    f = [],
+                    k = 'NewRule',
+                    a = {
+                        name: k,
+                        type: 'rule',
+                        active: '0'
+                    },
+                    g, m = 2;
+                d(f, 0, b), d(l, j, c);
+                var i = j[0].name,
+                    h = f[0].name;
+                while (o(a.name, f)) a.name = k + m, m++;
+                return e == 'compare' ? (a = Object.assign(a, {
+                    ctype: 'compare',
+                    cvar: l[0].name,
+                    ccomp: 'greaterorequal',
+                    cval: '85',
+                    actval: '0'
+                }), n == 'node' ? (a.acttype = 'node', a.actvar = i) : (a.acttype = 'rule', a.actvar = h)) : (a = Object.assign(a, {
+                    ctype: 'timer',
+                    ts: '-1',
+                    t1: '25',
+                    t2: '10:00',
+                    cyc: '1',
+                    actval1: '0',
+                    actval2: '0'
+                }), n == 'node' ? (a.acttype1 = a.acttype2 = 'node', a.actvar1 = i, a.actvar2 = i) : (a.acttype1 = a.acttype2 = 'rule', a.actvar1 = h, a.actvar2 = h)), rn.name !== undefined && (console.log('found previous', rn), a.name = rn.name, e == 'compare' && rn.ctype == e && (a.cvar = rn.cvar, a.ccomp = rn.ccomp, a.cval = rn.cval, a.actval = rn.actval), e == 'timer' && rn.ctype == e && (a.t1 = rn.t1, a.t2 = rn.t2, a.cyc = rn.cyc, a.actval1 = rn.actval1, a.actval2 = rn.actval2)), a;
+            }, changeRule = function(a) {
+                var e = !1,
+                    f = 0,
+                    h = document.getElementById('neo');
+                if ((a == 'compare' || a == 'timer') && (f = 1), h !== null) {
+                    rn = {
+                        ctype: sa
+                    }, sa == 'timer' ? (rn.acttype1 = sb, rn.acttype2 = sb) : rn.acttype = sb;
+                    var i = h.firstChild.elements;
+                    for (var g = 0; g < i.length; g++) {
+                        var d = i.item(g);
+                        d.name == 'rule' ? rn.name = d.value : rn[d.name] = d.value;
+                    }
+                }
+                f == 1 && a != sa && (sa = a, e = !0), f == 0 && a != sb && (sb = a, e = !0), e && (rn = getDef(sa, sb), document.getElementById('neo').innerHTML = getRuleHtml(rn, b, c, !0));
+            };
+            var a = getPre('neo');
+            return a += 'Condition : ' + e('compare', 'Compare', 'timer', 'Timer') + '</td><td>Action : ' + e('node', 'Node', 'rule', 'Rule') + '</td><tr id=neo>', sa = 'compare', sb = 'node', rn = {}, rn = getDef(sa, sb), a += getRuleHtml(rn, b, c, !0), a += '</tr></table>', a;
+        };
+        window.onload = function() {
+            function c() {
+                this.buffer = '', this.write = function(a) {
+                    this.buffer += a;
+                };
+            }
+            nodes = document.getElementById('nodes').textContent, rules = document.getElementById('rules').textContent, nodes = nodes.replace('\\\\xB0', '&#176;');
+            var a = new c();
+            var b = writeTable('input', {}, 10000, a, nodes);
+            b = writeTable('output', {}, 10000, a, nodes), b = writeTable('rule', {}, 10000, a, rules, nodes), a.buffer += addRule(rules, nodes), document.getElementById('data').innerHTML = a.buffer;
+        }
+    </script>
+</head>
+
+<body>
+    <h1>IOServer v0.02</h1>
+    <div id='data'></div>
+    <script id='nodes'>
+        ["{\"name\":\"Humidity\",\"type\":\"input\",\"unit\":\"%\",\"val\":\"57.7\"}", "{\"name\":\"Temperature\",\"type\":\"input\",\"unit\":\"\\xB0C\",\"val\":\"24.4\"}", "{\"name\":\"Relay1\",\"type\":\"output\",\"val\":\"0\"}", "{\"name\":\"Relay2\",\"type\":\"output\",\"val\":\"0\"}"]
+    </script>
+    <script id='rules'>
+        ["{\"name\":\"MaxHumidity\",\"type\":\"rule\",\"ctype\":\"compare\",\"active\":\"1\",\"cvar\":\"Humidity\",\"ccomp\":\"greaterorequal\",\"cval\":\"85\",\"acttype\":\"node\",\"actvar\":\"Relay2\",\"actval\":\"0\"}", "{\"name\":\"MinHumidity\",\"type\":\"rule\",\"ctype\":\"compare\",\"active\":\"0\",\"cvar\":\"Humidity\",\"ccomp\":\"less\",\"cval\":\"75\",\"acttype\":\"rule\",\"actvar\":\"MaxHumidity\",\"actval\":\"1\"}", "{\"name\":\"Timerule\",\"type\":\"rule\",\"ctype\":\"timer\",\"active\":\"1\",\"ts\":\"5710\",\"t1\":\"25\",\"t2\":\"60:00\",\"cyc\":\"1\",\"acttype1\":\"node\",\"actvar1\":\"Relay2\",\"actval1\":\"1\",\"acttype2\":\"node\",\"actvar2\":\"Relay2\",\"actval2\":\"0\"}"]
+    </script><br>&emsp;&emsp;<img src='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' alt='IOSERVER' style='width:120px;'></body>
+
+</html>

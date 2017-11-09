@@ -25,16 +25,13 @@
 
 var FL = require("Flash");
 var FR = FL.getFree()[2]; // 3rd area has biggest chunk under 1MB
+var FA = [FL.getFree()[0].addr,FL.getFree()[1].addr]; // use first 2 pages
 var FB = FR.addr;         // start of flash save area (0xf7000)
 var FS = 0x1000;          // esp8266 flash page size
-var FN = FR.length / FS;  // number of flash pages
+var FN = 2+FR.length / FS;  // number of flash pages
 var FO = 0x40200000;      // offset from flash address to its memory-mapped location
 
-// copy string into a Uint8Array rounded up to a multiple of 4 in length
-function s2a(str) {
-  while (str.length & 3) str += " ";
-  return E.toUint8Array(str);
-}
+
 
 // find flash page for a string by name, returns the flash page address.
 // If the name is not found and free==1 it returns a free flash page addr, else it returns 0
@@ -43,7 +40,9 @@ function findName(name, free) {
   // iterate through flash pages to see whether there's a match
   var f = 0;
   for (var i=0; i<FN; i++) {
-    var addr = FB+i*FS;
+	  var addr ;
+		if(i<2) addr = FA[i];
+		else addr= FB+(i-2)*FS;
   //  console.log("Checking", i, addr.toString(16));
     // read index at start of page with name length and code text length
     var ix = FL.read(4, addr);
@@ -73,6 +72,11 @@ function findName(name, free) {
 // load() retrieves a string by name or null if not found. The retrieved string is kept in
 // flash, i.e., it's a string created by E.memoryArea.
 exports.load = function(name) {
+	// copy string into a Uint8Array rounded up to a multiple of 4 in length
+	function s2a(str) {
+	  while (str.length & 3) str += " ";
+	  return E.toUint8Array(str);
+	}
   // copy the module name into a Uint8Array rounded up to a multiple of 4 in length
   var nameArr = s2a(name);
   // iterate through flash pages to see whether there's a match

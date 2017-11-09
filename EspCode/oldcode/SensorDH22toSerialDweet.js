@@ -1,5 +1,18 @@
 // DHT22: VCC . DATA . NC . GND
-
+/*
+ * 
+ * 
+pin=NodeMCU.D2;
+var dht22 = require("DHT22").connect(pin);
+var dht22_read_test = function() {
+  dht22.read(
+    function(a){
+      console.log("Temp is "+a.temp.toString()+ " and RH is "+a.rh.toString());
+       
+     });
+};
+setInterval(dht22_read_test,3000);
+ */
 pin=NodeMCU.D2;
 var dht22 = require("DHT22").connect(pin);
 var dht22_read_test = function() {

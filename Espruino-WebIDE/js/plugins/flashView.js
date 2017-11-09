@@ -75,7 +75,7 @@
 
 		getProjectSubDir("modules",function(dir){
 			chrome.fileSystem.getDisplayPath(dir, function(path) {
-				console.log("writing modules");
+				//console.log("writing modules");
 				var header,row,footer;
 				header = '<div id="m"><table width="100%" ><caption>Folder : '+path+'</caption>';
 				header+= '<tr><td></td><td></td><td></td><td></td><td style="text-align:center"><button title="send FlashString loader" class="uploadLoader" ';
@@ -84,17 +84,17 @@
 				var st='style="color:#808080"';
 				var st2='style="color:#808080;text-align:center"';
 				if(!Espruino.Core.Serial.isConnected()) {
-					header+= '<tr><td '+st+' > </td><td>bytes</td><td></td><td '+st2+'></td><td  '+st2+'></td><td  +'+st2+'></td></tr>';
+					header+= '<tr><td '+st+' > </td><td>bytes</td><td style="text-align:center;color:#808080;">(minified)</td><td '+st2+'></td><td  '+st2+'></td><td  +'+st2+'></td></tr>';
 
-				}else header+= '<tr><td '+st+' >transfer to </td><td>bytes</td><td></td><td '+st2+'>memory</td><td  '+st2+'>flash</td><td  +'+st2+'></td></tr>';
+				} else header+= '<tr><td '+st+' >transfer to </td><td>bytes</td><td style="text-align:center;color:#808080;">(minified)</td><td '+st2+'>memory</td><td  '+st2+'>flash</td><td  +'+st2+'></td></tr>';
 
 
 				//	header+= '<tr><td '+st+' >transfer to </td><td>bytes</td><td></td><td '+st2+'>memory</td><td  '+st2+'>flash</td><td  +'+st2+'></td></tr>';
 				row = '<tr><th>$name</th><td>$size0</td><td title="minified" style="text-align:center;color:#808080;">$minified</td>';
-				row += '<td style="text-align:center"><button title="upload to Memory" class="uploadToMemory" fileentry="$fileentry" ';
+				row += '<td style="text-align:center"><button title="upload $name to Memory" class="uploadToMemory" fileentry="$fileentry" ';
 				if(!Espruino.Core.Serial.isConnected()) row+='style="display:none;" ';
 				row += 'filename="$name"></button></td>'
-					row += '<td style="text-align:center"><button title="upload to Flash" class="uploadToFlash" fileentry="$fileentry" ';
+					row += '<td style="text-align:center"><button title="upload $name to Flash" class="uploadToFlash" fileentry="$fileentry" ';
 				if(!Espruino.Core.Serial.isConnected()) row+='style="display:none;" ';
 				row += 'filename="$name"></button></td>'
 					row += '<td>';
@@ -331,7 +331,7 @@
 	function showMemHtml(arr,mem) {
 
 		var header,row="",footer;
-		header = '<div id="r" style="text-align:center"><table width="100%"><caption>Modules in Memory</caption><tr><th style="color:#808080">name</th><th style="color:#808080;">blocks</th><th style="color:#808080;">update</th><th style="color:#808080;">erase</th></tr>';
+		header = '<div id="r" style="text-align:center"><table width="100%"><caption>Modules in Memory</caption><tr><th style="color:#808080">name</th><th style="color:#808080;">blocks <font style="color:#A0A0A0;font-weight: normal">(bytes)</font></th><th style="color:#808080;">update</th><th style="color:#808080;">erase</th></tr>';
 		var i=1;
 		var free=-1;
 		var tsize=0;
@@ -340,7 +340,7 @@
 
 			//	console.log("before");
 			if(e.hasOwnProperty("name")) {
-				row += '<tr><td style="text-align:left">'+(i++)+') '+e.name+'</td><td>'+e.size+'</td><td>';
+				row += '<tr><td style="text-align:left">'+(i++)+') '+e.name+'</td><td>'+e.size+'<font style="color:#808080"> ('+(e.size*20)+')</font></td><td>';
 
 				//checkFileExists("modules",(e.name+".js"),function(){print("file found:"+)},function(){});
 
@@ -385,7 +385,7 @@
 			row += '</tr>\n';
 
 		});
-		row += '<tr></tr><tr><td style="text-align:left">All : '+(i-1)+' </td><td>'+tsize+'</td><td></td><td>';
+		row += '<tr></tr><tr><td style="text-align:left">All : '+(i-1)+' </td><td>'+tsize+'<font style="color:#808080"> ('+(tsize*20)+')</font></td><td></td><td>';
 		if(tsize>0)row+='<button title="Erase item from Memory" class="eraseMem" filename="all"></button>';
 		row+='</td></tr>';;
 
@@ -393,10 +393,10 @@
 		var mfooter="";
 		for (var property in mem) {
 			if (mem.hasOwnProperty(property)) {
-				mfooter+=property+":"+mem[property]+", ";
+				mfooter+=property+": "+mem[property]+'<font style="color:#A0A0A0">('+(mem[property]*20)+')</font>, ';
 			}
 		}
-		if(mfooter.length>2) footer+="("+mfooter.substring(0,mfooter.length-2)+")";
+		if(mfooter.length>2) footer+="["+mfooter.substring(0,mfooter.length-2)+"]";
 
 		footer+='</caption>  </small></div>';
 		return header+row+footer;
@@ -459,7 +459,7 @@
 
 			Espruino.callProcessor("transformModuleForEspruino", idata, function(data) {
 				minified[path+".js"]={"full":idata.length,"mini":data.length};
-				//	console.log("minified 2 "+JSON.stringify(minified));
+			//		console.log("minified 2 "+JSON.stringify(minified));
 				//Espruino.callProcessor("sending");
 				data=Espruino.Core.CodeWriter.reformatCode(data);
 				data=data.replace(new RegExp("\u0010", 'g'), "");
@@ -660,10 +660,10 @@
 		var fileName = $(this).attr("filename");
 		console.log("Erase:"+fileName);
 		if(fileName=="all") {
-			Espruino.Core.Serial.write("require('FlashString').eraseAll();\n");
+			Espruino.Core.Serial.write("require('FlashString').eraseAll();\u0010print('All flash memory erased !');\n");
 			getFlashState();
 		} else{
-			Espruino.Core.Serial.write("require('FlashString').erase('"+fileName+"');\n");
+			Espruino.Core.Serial.write("require('FlashString').erase('"+fileName+"');\u0010print('Flash memory page "+fileName+" erased !');\n");
 			getFlashState();
 		}
 	}
@@ -682,15 +682,17 @@
 		//	src='echo(1);\n;require("fs").writeFile("'+path+'","'+idata+'");\n;echo(1);\n;';
 
 			Espruino.callProcessor("transformModuleForEspruino", idata, function(data) {
-				minified[path+".js"]={"full":idata.length,"mini":data.length};
+				minified[path]={"full":idata.length,"mini":data.length};
+			//	console.log("minified 3 "+JSON.stringify(minified));
 				data=data.replace(new RegExp(String.fromCharCode(10), 'g'), "");
+				
 
 				data=JSON.stringify(data);
 				
 				console.log("data last :"+data.charCodeAt(data.length-2),data.charCodeAt(data.length-1));
 				console.log("data size :"+data.length);
 				// \u0010;
-				src="\u0010;require('FlashString').save('"+path+"',"+data+");\n";
+				src="\u0010;require('FlashString').save('"+path+"',"+data+");\u0010print('File uploaded to flash :','"+path+"');\n";
 
 				console.log("src:"+src);
 				console.log("character : '"+data.charCodeAt(data.length-1)+"'");
@@ -739,7 +741,7 @@
 				if(!Espruino.Core.Serial.isConnected()) header+='style="display:none;" ';		
 				header+= '></button></td><td></td></tr>';
 				if(!Espruino.Core.Serial.isConnected()) header+= '<tr><td  style="color:#808080"></td><td>bytes</td><td></td><td style="color:#808080;text-align:center"></td><td  style="color:#808080;text-align:center"></td><td  style="color:#808080;text-align:center"></td></tr>';
-				else header+= '<tr><td  style="color:#808080">transfer to </td><td>bytes</td><td></td><td  style="color:#808080;text-align:center">flash</td><td  style="color:#808080;text-align:center"></td></tr>';
+				else header+= '<tr><td  style="color:#808080">transfer to </td><td>bytes</td><td style="color:#808080;text-align:center">(bytes)</td><td  style="color:#808080;text-align:center">flash</td><td  style="color:#808080;text-align:center"></td></tr>';
 				row = '<tr><th>$name</th><td>$size0</td>';
 				row += '<td></td><td style="text-align:center"><button title="upload to Flash" class="uploadFileToFlash" fileentry="$fileentry" ';
 				if(!Espruino.Core.Serial.isConnected()) row+='style="display:none;" ';

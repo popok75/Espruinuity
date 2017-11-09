@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        .pure-table {
+            border-collapse: collapse;
+            border-spacing: 0;
+            empty-cells: show;
+            border: 1px solid #cbcbcb
+        }
+
+        .pure-table caption {
+            color: #888;
+            font: italic 125%/1 Helvetica, sans-serif;
+            padding: .5em 1;
+            text-align: center
+        }
+
+        .pure-table td,
+        .pure-table th {
+            border-left: 1px solid #cbcbcb;
+            border-width: 0 0 0 1px;
+            font-size: inherit;
+            margin: 0;
+            overflow: visible;
+            padding: .5em 1em
+        }
+
+        .pure-table td:first-child,
+        .pure-table th:first-child {
+            border-left-width: 0
+        }
+
+        .pure-table td {
+            background-color: transparent
+        }
+
+        .pure-table-odd td,
+        .pure-table-striped tr:nth-child(2n-1) td {
+            background-color: #f2f2f2
+        }
+
+        .pure-table-bordered td {
+            border-bottom: 1px solid #cbcbcb
+        }
+
+        .pure-table-bordered tbody>tr:last-child>td {
+            border-bottom-width: 0
+        }
+
+        h1 {
+            font-size: 1.75em;
+            margin: .67em 0;
+        }
+
+        body {
+            font-family: FreeSans, Arimo, 'Droid Sans', Helvetica, Arial, sans-serif;
+        }
+    </style>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <link rel='icon' href='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' sizes='32x32'>
+    <script>
+        getPre = function(str) {
+            switch (str) {
+                case "preinput":
+                    return "<table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Inputs</caption> <tr> <th >Input</th> <th >Value</th> </tr> </thead> <tbody>";
+                    break;
+                case "preoutput":
+                    return "<br><table class='pure-table pure-table-bordered pure-table-striped'> <thead> <caption>Outputs</caption><tr> <th >Output</th> <th >Value</th> </tr> </thead><tbody>";
+                    break;
+                case "prerule":
+                    return "<table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Rules</caption> <tr> <th>Active</th><th >Name</th><th >Condition</th> <th>Action</th> </tr> </thead><tbody>";
+                    break;
+						case "neo":  return "<table class='pure-table pure-table-bordered pure-table-striped'> <thead><caption>Add rule</caption></thead><tbody><tr><td>Name</td><td>";break;
+
+            }
+        };
+        var r = '';
+        var jp = JSON.parse;
+        writeTable = function(type, t, max, res, nodes, nnodes) {
+            function getSized(nh, mx, tr) {
+                var itbi = tr.lastitembytes;
+                if (nh.length - itbi > mx) {
+                    nh = nh.substring(itbi, itbi + mx);
+                    tr.lastitembytes = itbi + mx;
+                    tr.status = "continue"
+                } else {
+                    if (itbi > 0) nh = nh.substring(itbi);
+                    tr.lastitembytes = 0;
+                    tr.lastitem = tr.lastitem + 1;
+                    tr.status = "next"
+                }
+                return nh
+            }
+            var post = "</tbody> </table>";
+            var written = 0;
+            var towrite = "";
+            if (t.operation === undefined) {
+                t.operation = "header";
+                t.lastitem = 0, t.lastitembytes = 0;
+                t.written = 0
+            }
+            if (t.operation == "header") {
+                var nh;
+                if (r === "") nh = getSized(getPre("pre" + type), max, t);
+                else nh = getSized(r("IOServerStrings").getPre("pre" + type), max, t);
+                towrite += nh;
+                max -= nh.length;
+                written += nh.length;
+                if (t.status === "next") {
+                    t.operation = "data";
+                    t.lastitem = 0, t.lastitembytes = 0
+                }
+            }
+            var s = max;
+            var ns = jp(nodes);
+            if (t.operation == "data")
+                for (var i = t.lastitem; i < ns.length && written < s; i++) {
+                    var e = jp(ns[i]);
+                    if (e.type == type) {
+                        var nh = "";
+                        if (e.type == "rule")
+                            if (r === "") nh += getRuleHtml(e, nodes, nnodes);
+                            else nh += r("WifiSync").getRuleHtml(e, nodes, nnodes);
+                        else nh += getNodeHtml(e);
+                        t.lastitem = i;
+                        var nh2 = getSized(nh, max, t);
+                        max -= nh2.length;
+                        written += nh2.length;
+                        towrite += nh2
+                    }
+                }
+            if (t.operation == "data" && t.status == "next" && written < s) {
+                t.operation = "footer";
+                t.lastitem = 0, t.lastitembytes = 0
+            }
+            if (t.operation == "footer") {
+                var nh = getSized(post, max, t);
+                towrite += nh;
+                max -= nh.length;
+                if (t.status === "next") t.operation = "finished"
+            }
+            res.write(towrite);
+            t.written = towrite.length;
+            return t
+        };
+        getNodeHtml = function(e) {
+            var linestart = "<tr>";
+            var namestart = "<td>";
+            var nameend = "</td>";
+            var valuestart = "<td style='text-align: center'>";
+            var valueend = "</td>";
+            var lineend = "</tr>";
+
+            function getForm(e) {
+                var r = "<input type='radio' name='val' value='1'";
+                var r2 = "> On <input type='radio' name='val' value='0' ";
+                if (e.val == 0) {
+                    r += "onChange='this.form.submit();'";
+                    r2 += "checked"
+                } else {
+                    r2 += "onChange='this.form.submit();'";
+                    r += "checked"
+                }
+                r2 += "> Off";
+                return r + r2
+            }
+            var ret = "";
+            ret += linestart;
+            ret += namestart;
+            ret += e.name;
+            ret += nameend;
+            ret += valuestart;
+            if (e.type === "output") ret += "<form method='get' id='output'><input type='hidden' name='node' value=" + e.name + ">" + getForm(e) + "</form>";
+            else {
+                ret += e.val;
+                ret += e.unit
+            }
+            ret += valueend;
+            ret += lineend;
+            return ret
+        };
+		
+		
+		
+		
+		
+        getRuleHtml = function(rule, rules, nodes,neo) {
+	if(typeof(neo)==="undefined") neo=false;
+//	console.log("neo ", neo);
+	function getROpt(varn,tab,cv,rn) { // check memory use here
+		var r="<select name="+varn;
+		if(!neo) r+=" onChange='this.form.submit();'";
+		r+=" form='"+rn+"'>";
+//		print("inside tab:"+tab);
+		for(var i=0;i<tab.length;i++){
+			var e=tab[i];
+			var sy="symb";
+			if(e[sy]===undefined) sy="name";
+			r+="<option value='"+e.name+"' ";
+			if(e.name==cv) r+="selected ";
+			//print("e.name:",e.name,", cv:",cv);
+			r+=">"+e[sy]+"</option>";	
+		}	
+		return r+"</select>";
+	};
+
+	function getAction(t,vrn,vr,vln,vl,nds,rds,rn){
+		if(t=="rule") nds=rds;
+		var ret="<small>"+t+" </small>"+getROpt(vrn,nds, vr,rn);
+		var comp=[{name:"0",symb:"Off"},{name:"1",symb:"On"}];
+		ret+=getROpt(vln,comp,vl,rn);
+		return ret;
+	}
+
+	function gNN(sin,sout,n){
+		n=jp(n);
+		for(var i=0;i<n.length;i++){
+			var e=jp(n[i]);
+			if(sout===undefined)  {sin.push({name:e.name}); }
+			else {
+				if(e.type==="input") sin.push({name:e.name}); 
+				else if (e.type==="output") sout.push({name:e.name});	
+			}
+		}
+	}
+	
+	function gHid(n,v,rn){
+		var re="<input hidden " ;
+		if(n!="submit") re+="name='"+n+"' value=" + v + "";
+		else re+="type=submit ";
+		return re+" form='"+rn+"'>";
+	}
+	function gCB(n,v,rn,b){
+		var rt =gHid(n,v,rn)+"<input type='checkbox' onChange='this.form."+n+".value=1-this.form."+n+".value;";
+		if(b) rt+="this.form.submit();";
+		if (v == "1") rt += "' checked";
+		return rt+" form='"+rn+"'>";
+	}
+	var tz=3 ; //timezone
+//	print("getRuleHtml0.5-"+JSON.stringify(process.memory()));
+	var rn=rule.name, rnn=gHid("rule",rn,rn), ar="<td style='text-align:center'>"+gCB("active",rule.active,rn,true)+"</td>"+ "<td >"+rn;
+	//var rnn="<input hidden name='rule' form='"+rn+"' value=" + rn + ">" +ar + "<td >"+rn;
+	if(neo) rnn="<td ><input type='text' name='rule' form='"+rn+"' value=" + rn + ">",ar="";
+
+//	console.log("neo ", neo);
+//	console.log("rnn ", rnn);
+	var rts="";
+	if(rule.ts!=="-1" && rule.ts!==undefined) rts+="<small> : started "+(new Date(parseFloat(rule.ts-tz*3600000))).toString().split("GMT")[0]+"</small>";
+//	console.log("started : "+(new Date(parseFloat(rule.ts-tz*60*60*1000))).toString().split("GMT")[0]);
+	var ret = "<tr>";
+	if(neo) ret="";
+	ret+="<form method='get' id='"+rn+"'>"+ rnn+gHid("ctype",rule.ctype,rn) +ar+rts+"</td><td >";rnn="";rts="";
+	var ndsin=[];	// should be executed once per html page
+	var ndsout=[];
+	gNN(ndsin,ndsout,nodes);
+
+	var rnam=[];
+	gNN(rnam,undefined,rules);
+
+	nodes=undefined;
+	rules=undefined;
+
+	if(rule.ctype=="timer") {ndsin=undefined;
+		ret+="A1, wait :";
+		ret+="<input type='text' name='t1' value="+rule.t1+" size=1 style='width:2em' form='"+rn+"'>&nbsp;";
+		ret+="sec, A2. cycle :";
+		ret+= gCB("cyc",rule.cyc,rn,false);
+
+		if(rule.cyc=="1") ret+="<input type='text' name='t2' value="+rule.t2+" size=1 style='width: 2em' form='"+rn+"'>&nbsp;";
+		ret+="</td><td> A1:"+gHid("acttype1",rule.acttype1,rn);
+		ret+=getAction(rule.acttype1, "actvar1",rule.actvar1,"actval1",rule.actval1,ndsout,rnam,rn);
+		ret+=" , A2:"+gHid("acttype2",rule.acttype2,rn)+getAction(rule.acttype2,"actvar2",rule.actvar2,"actval2",rule.actval2,ndsout,rnam,rn);
+
+	} else {
+		ret+="if "+getROpt("cvar",ndsin ,rule.cvar,rn);
+		ndsin=undefined;
+		var comp=[{name:"less",symb:"&#60;"},{name:"greaterorequal",symb:"&#8805;"}];
+		ret+=getROpt("ccomp",comp,rule.ccomp,rn);
+		ret+="<input type='text' name='cval' value="+rule.cval+" size=1 style='width:2em' form='"+rn+"'>&nbsp;";
+		ret+="</td><td >then ";
+		ret+=gHid("acttype",rule.acttype,rn)+getAction(rule.acttype, "actvar",rule.actvar,"actval",rule.actval,ndsout,rnam,rn);
+	}
+	ndsout=undefined;
+	if(!neo) ret+=gHid("submit",rn,rn);//"<input type='submit' hidden form='" + rn + "'/>";
+	else ret+="</td><td><input type=submit form='"+rn+"'>";
+	
+	ret+="</td></form>";
+	if(!neo) ret+="</tr>";
+
+//	console.log("before ret",ret);
+	
+//	print("rule html length:"+ret.length);
+//	print("getRuleHtml-"+JSON.stringify(process.memory()));
+//	print("getRuleHtml:ret length",ret.length);
+//	print("getRuleHtml:ret size",E.getSizeOf(ret));
+//	print("getRuleHtml:nsin size",E.getSizeOf(ndsin));
+//	print("getRuleHtml:nsout size",E.getSizeOf(ndsout));
+//	print("getRuleHtml2-"+JSON.stringify(process.memory()));
+
+	return ret;
+
+
+        };
+		
+		
+		
+		addRule = function( rules, nodes){	//pb using dynamic change of form
+function gNN(s1,s2,n){
+		n=jp(n);
+		for(var i=0;i<n.length;i++){
+			var e=jp(n[i]);var en={name:e.name};
+			if(s2===0)  s1.push(en); 
+			else {if(e.type==="input") s1.push(en); 
+			else if (e.type==="output") s2.push(en);}	
+		}
+	};
+	getDef=function(cond,act){
+		function ctn(s,m){for(i=0;i<m.length;i++) {if(m[i].name==s) return true;} return false;};
+		var s1=[],s2=[],am=[], gn="MaxHumidity",w={name:gn, type:"rule", active:"0"},i,j=2;
+		gNN(am,0,rules);
+		gNN(s1,s2,nodes);	
+		var s0=s2[0].name, am0=am[0].name;
+		while(ctn(w.name,am)) w.name=gn+j,j++;
+		if(cond=="compare")
+			{ w=Object.assign(w,{ctype:"compare",cvar:s1[0].name,ccomp:"greaterorequal",cval:"85",actval:"0"});		
+			if(act=="node") {w.acttype="node";w.actvar=s0;
+			} else {w.acttype="rule";w.actvar=am0;}
+			}
+		else {w=Object.assign(w,{ctype:"timer",ts:"-1",t1:"25",t2:"10:00",cyc:"1",actval1:"0",actval2:"0"});
+			if(act=="node") {w.acttype1=w.acttype2="node";w.actvar1=s0;w.actvar2=s0;
+			} else {w.acttype1=w.acttype2="rule";w.actvar1=am0;w.actvar2=am0;}
+			}
+		if(rn.name!==undefined) {
+			console.log("found previous",rn);
+			w.name=rn.name;
+			if(cond=="compare" && rn.ctype==cond) {	w.cvar=rn.cvar;w.ccomp=rn.ccomp;w.cval=rn.cval;w.actval=rn.actval;} 
+			if(cond=="timer" && rn.ctype==cond) {w.t1=rn.t1;w.t2=rn.t2;w.cyc=rn.cyc;w.actval1=rn.actval1;w.actval2=rn.actval2;}
+		}
+		return w;
+	};
+
+	changeRule=function(v){
+		var u=false,c=0, doc=document.getElementById("neo");
+		if(v=="compare" || v=="timer") c=1;
+		if(doc!==null) {
+			rn ={ctype:sa};
+			if(sa=="timer") rn.acttype1=sb,rn.acttype2=sb;
+			else rn.acttype=sb;
+			var ess = doc.firstChild.elements;
+			for(var i = 0 ; i < ess.length ; i++){
+				var it = ess.item(i);
+				if(it.name=="rule") rn["name"] = it.value;
+				else rn[it.name] = it.value;					
+			}
+//			console.log("updated rn",rn);
+		}
+		if(c==1 && v!=sa) {sa=v;u=true;} 
+		if(c==0 && v!=sb) {sb=v;u=true;}
+		if(u){
+			rn=getDef(sa,sb); 
+			document.getElementById("neo").innerHTML=getRuleHtml(rn, rules, nodes, true);
+		}
+	};
+	
+	function gOpt(v,t,v2,t2){
+		function gO(b,y){return "<option value='"+b+"'>"+y+"</option>";}
+		return "<select onChange='changeRule(this.value)'>"+gO(v,t)+gO(v2,t2)+"</select>";
+	};
+	var ret=getPre("neo");
+	ret+="Condition : "+gOpt("compare","Compare","timer","Timer")+"</td><td>Action : "+gOpt("node","Node","rule","Rule")+"</td><tr id=neo>";
+	sa="compare";sb="node";	rn={};
+	rn=getDef(sa,sb);
+//	console.log("before rulehtml");
+	ret+=getRuleHtml(rn, rules, nodes, true); // make name editable, no on change events and add a submit button, no activate field
+	ret+="</tr></table>";
+	return ret;
+		};
+	
+        
+		window.onload = function() {
+            function resa() {
+                this.buffer = "";
+                this.write = function(str) {
+                    this.buffer += str
+                }
+            }
+            nodes = document.getElementById("nodes").textContent;
+            rules = document.getElementById("rules").textContent;
+            nodes = nodes.replace("\\\\xB0", "&#176;");
+            var r = new resa;
+            t = writeTable("input", {}, 1E4, r, nodes);
+            console.log(t);
+            t = writeTable("output", {}, 1E4, r, nodes);
+            console.log(t);
+            t = writeTable("rule", {}, 1E4, r, rules, nodes);
+            console.log(t);
+			r.buffer+=addRule( rules, nodes);
+            document.getElementById("data").innerHTML = r.buffer
+        }
+    </script>
+</head>
+
+<body>
+    <h1>IOServer v0.02</h1>
+    <div id='data'></div>
+    <script id='nodes'>
+        ["{\"name\":\"Humidity\",\"type\":\"input\",\"unit\":\"%\",\"val\":\"45.3\"}", "{\"name\":\"Temperature\",\"type\":\"input\",\"unit\":\"\\xB0C\",\"val\":\"24.7\"}", "{\"name\":\"Relay1\",\"type\":\"output\",\"val\":\"0\"}", "{\"name\":\"Relay2\",\"type\":\"output\",\"val\":\"0\"}"]
+    </script>
+    <script id='rules'>
+        ["{\"name\":\"MaxHumidity\",\"type\":\"rule\",\"ctype\":\"compare\",\"active\":\"1\",\"cvar\":\"Humidity\",\"ccomp\":\"greaterorequal\",\"cval\":\"85\",\"acttype\":\"node\",\"actvar\":\"Relay2\",\"actval\":\"0\"}", "{\"name\":\"MinHumidity\",\"type\":\"rule\",\"ctype\":\"compare\",\"active\":\"1\",\"cvar\":\"Humidity\",\"ccomp\":\"less\",\"cval\":\"75\",\"acttype\":\"rule\",\"actvar\":\"MaxHumidity\",\"actval\":\"1\"}", "{\"name\":\"Timerule\",\"type\":\"rule\",\"ctype\":\"timer\",\"active\":\"1\",\"ts\":\"1507135261709\",\"t1\":\"25\",\"t2\":\"60:00\",\"cyc\":\"1\",\"acttype1\":\"node\",\"actvar1\":\"Relay2\",\"actval1\":\"1\",\"acttype2\":\"node\",\"actvar2\":\"Relay2\",\"actval2\":\"0\"}"]
+    </script><br>&emsp;&emsp;<img src='https://d30y9cdsu7xlg0.cloudfront.net/png/911936-200.png' alt='IOSERVER' style='width:120px;'></body>
+
+</html>
